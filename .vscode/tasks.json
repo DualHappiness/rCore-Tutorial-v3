@@ -1,0 +1,98 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "cargo",
+			"command": "build",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"label": "rust: cargo build"
+		},
+		{
+			"type": "cargo",
+			"command": "build",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"args": [
+				"--release"
+			],
+			"label": "rust: cargo build release"
+		},
+		{
+			"type": "shell",
+			"command": "rust-objcopy",
+			"args": [
+				"--binary-architecture=riscv64",
+				"target/riscv64gc-unknown-none-elf/release/os",
+				"--strip-all",
+				"-O",
+				"binary",
+				"target/riscv64gc-unknown-none-elf/release/os.bin"
+			],
+			"dependsOn": [
+				"rust: cargo build release"
+			],
+			"label": "cargo: release",
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"command": "qemu-system-riscv64",
+			"args": [
+				"-machine",
+				"virt",
+				"-nographic",
+				"-bios",
+				"bootloader/rustsbi-qemu.bin",
+				"-device",
+				"loader,file=target/riscv64gc-unknown-none-elf/release/os.bin,addr=0x80200000",
+				"-S",
+				"-s"
+			],
+			"dependsOn": [
+				"cargo: release"
+			],
+			"label": "qemu: run debug",
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"command": "qemu-system-riscv64",
+			"args": [
+				"-machine",
+				"virt",
+				"-nographic",
+				"-bios",
+				"bootloader/rustsbi-qemu.bin",
+				"-device",
+				"loader,file=target/riscv64gc-unknown-none-elf/release/os.bin,addr=0x80200000"
+			],
+			"dependsOn": [
+				"cargo: release"
+			],
+			"label": "qemu: run",
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"command": "riscv64-unknown-elf-gdb",
+			"args": [
+				"target/riscv64gc-unknown-none-elf/release/os",
+				"-ex",
+				"'set arch riscv:rv64'",
+				"-ex",
+				"'target remote localhost:1234'"
+			],
+			"label": "rust-gdb: debug",
+			"problemMatcher": [
+				"$gcc"
+			]
+		}
+	]
+}
