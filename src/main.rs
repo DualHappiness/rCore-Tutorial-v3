@@ -4,7 +4,7 @@
 #![feature(global_asm)]
 #![feature(panic_info_message)]
 
-#[macro_use]
+// #[macro_use]
 mod console;
 mod lang_items;
 mod sbi;
@@ -12,8 +12,8 @@ mod sbi;
 global_asm!(include_str!("entry.asm"));
 
 use core::usize;
-
 use sbi::sbi_call;
+
 
 const SYSCALL_EXIT: usize = 93;
 const SBI_SHUTDOWN: usize = 8;
@@ -41,8 +41,9 @@ pub fn shutdown() -> ! {
 
 #[no_mangle]
 pub fn rust_main() -> ! {
-    // clear_bss();
-    println!("hello world");
+    console::init();
+    log::info!("hello world");
+    clear_bss();
     shutdown();
 }
 
