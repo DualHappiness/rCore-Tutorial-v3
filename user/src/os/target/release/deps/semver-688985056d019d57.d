@@ -1,9 +1,0 @@
-/home/dual/learn/rCore-Tutorial-v3/os/target/release/deps/semver-688985056d019d57.rmeta: /home/dual/.cargo/registry/src/mirrors.ustc.edu.cn-61ef6e0cd06fb9b8/semver-0.9.0/src/lib.rs /home/dual/.cargo/registry/src/mirrors.ustc.edu.cn-61ef6e0cd06fb9b8/semver-0.9.0/src/version.rs /home/dual/.cargo/registry/src/mirrors.ustc.edu.cn-61ef6e0cd06fb9b8/semver-0.9.0/src/version_req.rs
-
-/home/dual/learn/rCore-Tutorial-v3/os/target/release/deps/libsemver-688985056d019d57.rlib: /home/dual/.cargo/registry/src/mirrors.ustc.edu.cn-61ef6e0cd06fb9b8/semver-0.9.0/src/lib.rs /home/dual/.cargo/registry/src/mirrors.ustc.edu.cn-61ef6e0cd06fb9b8/semver-0.9.0/src/version.rs /home/dual/.cargo/registry/src/mirrors.ustc.edu.cn-61ef6e0cd06fb9b8/semver-0.9.0/src/version_req.rs
-
-/home/dual/learn/rCore-Tutorial-v3/os/target/release/deps/semver-688985056d019d57.d: /home/dual/.cargo/registry/src/mirrors.ustc.edu.cn-61ef6e0cd06fb9b8/semver-0.9.0/src/lib.rs /home/dual/.cargo/registry/src/mirrors.ustc.edu.cn-61ef6e0cd06fb9b8/semver-0.9.0/src/version.rs /home/dual/.cargo/registry/src/mirrors.ustc.edu.cn-61ef6e0cd06fb9b8/semver-0.9.0/src/version_req.rs
-
-/home/dual/.cargo/registry/src/mirrors.ustc.edu.cn-61ef6e0cd06fb9b8/semver-0.9.0/src/lib.rs:
-/home/dual/.cargo/registry/src/mirrors.ustc.edu.cn-61ef6e0cd06fb9b8/semver-0.9.0/src/version.rs:
-/home/dual/.cargo/registry/src/mirrors.ustc.edu.cn-61ef6e0cd06fb9b8/semver-0.9.0/src/version_req.rs:
