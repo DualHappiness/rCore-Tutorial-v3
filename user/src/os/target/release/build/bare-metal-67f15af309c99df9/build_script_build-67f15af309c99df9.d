@@ -1,0 +1,5 @@
+/home/dual/learn/rCore-Tutorial-v3/os/target/release/build/bare-metal-67f15af309c99df9/build_script_build-67f15af309c99df9: /home/dual/.cargo/registry/src/mirrors.ustc.edu.cn-61ef6e0cd06fb9b8/bare-metal-0.2.5/build.rs
+
+/home/dual/learn/rCore-Tutorial-v3/os/target/release/build/bare-metal-67f15af309c99df9/build_script_build-67f15af309c99df9.d: /home/dual/.cargo/registry/src/mirrors.ustc.edu.cn-61ef6e0cd06fb9b8/bare-metal-0.2.5/build.rs
+
+/home/dual/.cargo/registry/src/mirrors.ustc.edu.cn-61ef6e0cd06fb9b8/bare-metal-0.2.5/build.rs:
