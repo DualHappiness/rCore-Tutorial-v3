@@ -1,5 +1,7 @@
 use crate::*;
-use core::fmt::{self, Write};
+use core::{
+    fmt::{self, Write},
+};
 use log::{self, Level, LevelFilter, Log, Metadata, Record};
 
 macro_rules! with_color {
@@ -8,15 +10,8 @@ macro_rules! with_color {
     }};
 }
 
-const SYSCALL_WRITE: usize = 64;
-const SBI_CONSOLE_PUTCHAR: usize = 1;
-
-pub fn sys_write(fd: usize, buffer: &[u8]) -> isize {
-    syscall(SYSCALL_WRITE, [fd, buffer.as_ptr() as usize, buffer.len()])
-}
-
 pub fn console_putchar(c: usize) {
-    syscall(SBI_CONSOLE_PUTCHAR, [c, 0, 0]);
+    crate::sbi::console_putchar(c)
 }
 
 struct Stdout;
@@ -81,4 +76,18 @@ pub fn init() {
         Some("trace") => LevelFilter::Trace,
         _ => LevelFilter::Off,
     });
+}
+
+#[macro_export]
+macro_rules! println {
+    ($fmt: literal $(, $($arg: tt)+)?) => {
+        log::info!(concat!($fmt, "\n") $(, $($arg)+)?)
+    }
+}
+
+#[macro_export]
+macro_rules! print {
+    ($($arg: tt)*) => {
+        log::info!($($arg)*)
+    }
 }

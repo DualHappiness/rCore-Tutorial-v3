@@ -4,47 +4,27 @@
 #![feature(global_asm)]
 #![feature(panic_info_message)]
 
-// #[macro_use]
+#[macro_use]
 mod console;
+mod batch;
 mod lang_items;
 mod sbi;
+mod syscall;
+mod trap;
 
 global_asm!(include_str!("entry.asm"));
+global_asm!(include_str!("link_app.S"));
 
 use core::usize;
-use sbi::sbi_call;
-
-
-const SYSCALL_EXIT: usize = 93;
-const SBI_SHUTDOWN: usize = 8;
-
-fn syscall(id: usize, args: [usize; 3]) -> isize {
-    let mut ret: isize;
-    unsafe {
-        llvm_asm!("ecall"
-            : "={x10}" (ret)
-            : "{x10}" (args[0]), "{x11}" (args[1]), "{x12}" (args[2]), "{x17}" (id)
-            : "memory"
-            : "volatile");
-    }
-    ret
-}
-
-pub fn sys_exit(xstate: i32) -> isize {
-    syscall(SYSCALL_EXIT, [xstate as usize, 0, 0])
-}
-
-pub fn shutdown() -> ! {
-    sbi_call(SBI_SHUTDOWN, 0, 0, 0);
-    panic!("It should shutdown");
-}
 
 #[no_mangle]
 pub fn rust_main() -> ! {
     console::init();
-    log::info!("hello world");
     clear_bss();
-    shutdown();
+    println!("[kernel] Hello, world!");
+    trap::init();
+    batch::init();
+    batch::run_next_app();
 }
 
 fn clear_bss() {
