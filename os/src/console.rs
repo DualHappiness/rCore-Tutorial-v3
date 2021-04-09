@@ -4,6 +4,7 @@ use core::{
 };
 use log::{self, Level, LevelFilter, Log, Metadata, Record};
 
+
 macro_rules! with_color {
     ($args: ident, $color: ident) => {{
         format_args!("\u{1B}[{}m{}\u{1B}[0m", $color as u8, $args)

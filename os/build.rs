@@ -1,11 +1,7 @@
-use std::fs::{self, read_dir, File};
-use std::path::Path;
-use std::{
-    fs::FileType,
-    io::{self, Result, Write},
-};
+use std::fs::{read_dir, File};
+use std::io::{Result, Write};
 
-static TARGET_PATH: &str = "../user/target/riscv64gc-unknown-none-elf/release/";
+static TARGET_PATH: &str = "../tests/user/build/bin/";
 
 fn main() {
     println!("cargo:return-if-changed=../user/src/");
@@ -15,13 +11,10 @@ fn main() {
 
 fn insert_app_data() -> Result<()> {
     let mut f = File::create("src/link_app.S")?;
-    let mut apps: Vec<_> = read_dir("../user/src/bin")?
+    let mut apps: Vec<_> = read_dir(TARGET_PATH)?
         .into_iter()
         .filter_map(|dir| dir.ok())
-        .map(|dir| {
-            dir.path().file_stem().unwrap().to_str().unwrap().to_owned()
-            // let
-        })
+        .map(|dir| dir.path().file_stem().unwrap().to_str().unwrap().to_owned())
         .collect();
     apps.sort();
     writeln!(

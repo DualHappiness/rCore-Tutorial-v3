@@ -1,9 +1,4 @@
-use core::usize;
-
-use riscv::register::{
-    sepc,
-    sstatus::{self, Sstatus, SPP},
-};
+use riscv::register::sstatus::{Sstatus, self, SPP};
 
 #[repr(C)]
 pub struct TrapContext {
