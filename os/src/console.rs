@@ -47,7 +47,7 @@ impl Log for SimpleLogger {
             return;
         }
         print_with_color(
-            format_args!("[{:>5}] {}", record.level(), record.args()),
+            format_args!("{}", record.args()),
             level_to_color(record.level()),
         );
     }
