@@ -1,12 +1,14 @@
 const FD_STDOUT: usize = 1;
 use core::usize;
 
-use crate::batch::{Stack, APP_BASE_ADDRESS, APP_SIZE_LIMIT, USER_STACK, USER_STACK_SIZE};
+use crate::loader::{Stack, USER_STACK};
+use crate::{config::*, task::get_current};
 
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     if let FD_STDOUT = fd {
         let start = buf as usize;
-        let sp = USER_STACK.get_sp();
+        let current = get_current();
+        let sp = USER_STACK[current].get_sp();
 
         if (start >= APP_BASE_ADDRESS && start + len <= APP_BASE_ADDRESS + APP_SIZE_LIMIT)
             || (start >= sp - USER_STACK_SIZE && start + len <= sp)

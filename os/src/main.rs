@@ -1,13 +1,13 @@
 #![no_std]
 #![no_main]
-#![feature(llvm_asm)]
 #![feature(global_asm)]
+#![feature(llvm_asm)]
 #![feature(panic_info_message)]
 
 
 #[macro_use]
 mod console;
-mod batch;
+mod task;
 mod lang_items;
 mod sbi;
 mod syscall;
@@ -27,7 +27,7 @@ pub fn rust_main() -> ! {
     println!("[kernel] Hello, world!");
     trap::init();
     loader::load_apps();
-    loader::run_next_app();
+    task::run_first_task();
     panic!("Unreachable");
 }
 

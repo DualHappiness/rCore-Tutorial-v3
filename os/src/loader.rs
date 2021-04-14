@@ -1,7 +1,5 @@
-use crate::config::*;
 use crate::trap::TrapContext;
-use core::{cell::RefCell, usize};
-use lazy_static::lazy_static;
+use crate::{config::*, task::TaskContext};
 
 #[repr(align(4096))]
 #[derive(Copy, Clone)]
@@ -33,12 +31,21 @@ impl Stack for KernelStack {
 }
 
 impl KernelStack {
-    pub fn push_context(&self, cx: TrapContext) -> &'static mut TrapContext {
-        let cx_prt = (self.get_sp() - core::mem::size_of::<TrapContext>()) as *mut TrapContext;
+    pub fn push_context(
+        &self,
+        trap_cx: TrapContext,
+        task_cx: TaskContext,
+    ) -> &'static mut TaskContext {
+        let trap_cx_ptr = (self.get_sp() - core::mem::size_of::<TrapContext>()) as *mut TrapContext;
         unsafe {
-            *cx_prt = cx;
+            *trap_cx_ptr = trap_cx;
         }
-        unsafe { cx_prt.as_mut().unwrap() }
+        let task_cx_ptr =
+            (trap_cx_ptr as usize - core::mem::size_of::<TaskContext>()) as *mut TaskContext;
+        unsafe {
+            *task_cx_ptr = task_cx;
+            task_cx_ptr.as_mut().unwrap()
+        }
     }
 }
 
@@ -77,67 +84,16 @@ fn get_base_i(app_id: usize) -> usize {
     APP_BASE_ADDRESS + app_id * APP_SIZE_LIMIT
 }
 
-fn get_num_app() -> usize {
+pub fn get_num_app() -> usize {
     extern "C" {
         fn _num_app();
     }
     unsafe { (_num_app as usize as *const usize).read_volatile() }
 }
 
-// * 用RefCell避免static mut
-struct AppManager {
-    inner: RefCell<AppManagerInner>,
-}
-
-struct AppManagerInner {
-    num_app: usize,
-    current_app: usize,
-}
-
-unsafe impl Sync for AppManager {}
-
-impl AppManagerInner {
-    pub fn print_app_info(&self) {
-        println!("[kernel] num_app = {}", self.num_app);
-    }
-
-    pub fn get_current_app(&self) -> usize {
-        self.current_app
-    }
-
-    pub fn move_to_next_app(&mut self) {
-        self.current_app += 1;
-    }
-}
-
-lazy_static! {
-    static ref APP_MANAGER: AppManager = AppManager {
-        inner: RefCell::new({
-            extern "C" {
-                fn _num_app();
-            }
-            let num_app = unsafe { (_num_app as usize as *const usize).read_volatile() };
-            AppManagerInner {
-                num_app,
-                current_app: 0,
-            }
-        }),
-    };
-}
-
-pub fn run_next_app() -> ! {
-    let current_app = APP_MANAGER.inner.borrow().get_current_app();
-    APP_MANAGER.inner.borrow_mut().move_to_next_app();
-    extern "C" {
-        fn __restore(cx_addr: usize);
-    }
-    unsafe {
-        __restore(
-            KERNEL_STACK[current_app].push_context(TrapContext::app_init_context(
-                get_base_i(current_app),
-                USER_STACK[current_app].get_sp(),
-            )) as *const _ as usize,
-        );
-    }
-    panic!("Unreachable in batch::run_current_app!");
+pub fn init_app_cx(app_id: usize) -> &'static TaskContext {
+    KERNEL_STACK[app_id].push_context(
+        TrapContext::app_init_context(get_base_i(app_id), USER_STACK[app_id].get_sp()),
+        TaskContext::goto_restore(),
+    )
 }
