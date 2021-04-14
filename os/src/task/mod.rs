@@ -25,7 +25,7 @@ impl TaskManager {
         if priority >= MAX_PRIORITY as isize {
             let mut inner = self.inner.borrow_mut();
             let current = inner.current_task;
-            inner.tasks[current].priority = priority as usize;
+            inner.tasks[current].priority = priority as u8;
             priority
         } else {
             -1
@@ -72,7 +72,7 @@ impl TaskManager {
             .as_mut()
             .into_iter()
             .filter(|task| task.task_status == TaskStatus::Ready)
-            .filter(|task| task.stride >= MAX_STRIDE)
+            .filter(|task| task.total_stride >= MAX_STRIDE)
             .for_each(|task| task.task_status = TaskStatus::Exited)
     }
 
@@ -83,7 +83,9 @@ impl TaskManager {
             let mut inner = self.inner.borrow_mut();
             let current = inner.current_task;
             inner.tasks[next].task_status = TaskStatus::Running;
-            inner.tasks[next].stride += BIG_STRIDE / inner.tasks[next].priority;
+            let pass = BIG_STRIDE / inner.tasks[next].priority;
+            inner.tasks[next].stride += pass;
+            inner.tasks[next].total_stride += pass as usize;
             inner.current_task = next;
             let current_task_cx_ptr2 = inner.tasks[current].get_task_cx_ptr2();
             let next_task_cx_ptr2 = inner.tasks[next].get_task_cx_ptr2();
