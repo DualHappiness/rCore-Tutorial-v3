@@ -1,6 +1,7 @@
 use crate::{
     config::{BIG_STRIDE, MAX_PRIORITY, MAX_STRIDE},
     loader::get_app_data,
+    mm::MapPermission,
 };
 use crate::{loader::get_num_app, trap::TrapContext};
 use alloc::vec::Vec;
@@ -183,4 +184,23 @@ impl TaskManager {
         let current = inner.current_task;
         inner.tasks[current].get_trap_cx()
     }
+
+    fn alloc(&self, start: usize, len: usize, perm: MapPermission) -> Option<usize> {
+        let mut inner = self.inner.borrow_mut();
+        let current = inner.current_task;
+        inner.tasks[current].memory_set.alloc(start, len, perm)
+    }
+    fn dealloc(&self, start: usize, len: usize) -> Option<usize> {
+        let mut inner = self.inner.borrow_mut();
+        let current = inner.current_task;
+        inner.tasks[current].memory_set.dealloc(start, len)
+    }
+}
+
+pub fn alloc(start: usize, len: usize, perm: MapPermission) -> Option<usize> {
+    TASK_MANAGER.alloc(start, len, perm)
+}
+
+pub fn dealloc(start: usize, len: usize) -> Option<usize> {
+    TASK_MANAGER.dealloc(start, len)
 }

@@ -3,7 +3,6 @@ use crate::sbi::set_timer;
 use riscv::register::time;
 
 const TICKS_PER_SEC: usize = 100;
-const MSEC_PER_SEC: usize = 1000;
 const USEC_PER_SEC: usize = 1000_000;
 
 #[repr(C)]
@@ -14,6 +13,7 @@ pub struct TimeVal {
 }
 
 impl TimeVal {
+    #[allow(unused)]
     pub fn new() -> Self {
         TimeVal { sec: 0, usec: 0 }
     }

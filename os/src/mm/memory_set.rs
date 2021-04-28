@@ -309,6 +309,44 @@ impl MemorySet {
         }
         self.areas.push(map_area);
     }
+
+    pub fn alloc(&mut self, start: usize, len: usize, perm: MapPermission) -> Option<usize> {
+        let start_va = start.into();
+        let end_va = (start + len).into();
+        let area = MapArea::new(start_va, end_va, MapType::Framed, perm | MapPermission::U);
+
+        println!(
+            "alloc --  start_va: {:#x} end_va: {:#x}",
+            start_va.0, end_va.0
+        );
+        let mut page_count = 0;
+        for vpn in area.vpn_range {
+            if let Some(pte) = self.page_table.translate(vpn) {
+                if pte.is_valid() {
+                    return None;
+                }
+            }
+            page_count += 1;
+        }
+
+        self.push(area, None);
+        Some(page_count * PAGE_SIZE)
+    }
+
+    pub fn dealloc(&mut self, start: usize, len: usize) -> Option<usize> {
+        let start_va: VirtAddr = start.into();
+        let end_va: VirtAddr = (start + len).into();
+        if let Some((index, area)) = self.areas.iter_mut().enumerate().find(|(_, area)| {
+            area.vpn_range.get_start() == start_va.floor()
+                && area.vpn_range.get_end() == end_va.ceil()
+        }) {
+            let len = area.vpn_range.into_iter().count();
+            area.unmap(&mut self.page_table);
+            self.areas.remove(index);
+            return Some(len * PAGE_SIZE);
+        }
+        None
+    }
 }
 
 impl MemorySet {

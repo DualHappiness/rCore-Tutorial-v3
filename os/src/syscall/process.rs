@@ -1,8 +1,11 @@
-use core::iter::Map;
-
-use crate::{config::MAX_ALLOC_SIZE, mm::{translated, translated_byte_buffer, MapPermission}, task::{
+use crate::{
+    config::MAX_ALLOC_SIZE,
+    mm::{translated, MapPermission},
+    task::{
         current_user_token, exit_current_and_run_next, set_priority, suspend_current_and_run_next,
-    }, timer::{get_time_ms, TimeVal}};
+    },
+    timer::{get_time_ms, TimeVal},
+};
 
 pub fn sys_exit(exit_code: i32) -> ! {
     println!("[kernel] Application exited with code {}", exit_code);
@@ -17,10 +20,8 @@ pub fn sys_yield() -> isize {
 }
 
 pub fn sys_get_time(time: *mut TimeVal) -> isize {
-    unsafe {
-        let time = translated(current_user_token(), time);
-        *time = get_time_ms();
-    }
+    let time = translated(current_user_token(), time);
+    *time = get_time_ms();
     0
 }
 
@@ -28,23 +29,23 @@ pub fn sys_set_priority(priority: isize) -> isize {
     set_priority(priority)
 }
 
-pub fn mmap(start: usize, len: usize, port: usize) -> i32 {
-    if port >> 3 != 0 || len > MAX_ALLOC_SIZE {
+pub fn sys_mmap(start: usize, len: usize, prot: usize) -> isize {
+    if prot & !0x7 != 0 || prot & 0x7 == 0 || len > MAX_ALLOC_SIZE || start % 0x1000 != 0 {
         return -1;
     }
     if len == 0 {
         return 0;
     }
-    let mut perm = MapPermission::empty();
-    if port & (1 << 0) != 0 {
-        perm |= MapPermission::R;
-    }
-    if port & (1 << 1) != 0 {
-        perm |= MapPermission::W;
-    }
-    if port & (1 << 2) != 0 {
-        perm |= MapPermission::X;
-    }
+    let perm = MapPermission::from_bits_truncate((prot as u8) << 1);
+    crate::task::alloc(start, len, perm).map_or(-1, |size| size as isize)
+}
 
-    return 0;
+pub fn sys_munmap(start: usize, len: usize) -> isize {
+    if len > MAX_ALLOC_SIZE || start % 0x1000 != 0 {
+        return -1;
+    }
+    if len == 0 {
+        return 0;
+    }
+    crate::task::dealloc(start, len).map_or(-1, |size| size as isize)
 }
