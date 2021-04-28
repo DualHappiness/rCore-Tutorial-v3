@@ -1,5 +1,9 @@
-use crate::config::{BIG_STRIDE, MAX_APP_NUM, MAX_PRIORITY, MAX_STRIDE};
-use crate::loader::{get_num_app, init_app_cx};
+use crate::{
+    config::{BIG_STRIDE, MAX_PRIORITY, MAX_STRIDE},
+    loader::get_app_data,
+};
+use crate::{loader::get_num_app, trap::TrapContext};
+use alloc::vec::Vec;
 use core::{cell::RefCell, usize};
 use lazy_static::lazy_static;
 use task::{TaskControlBlock, TaskStatus};
@@ -17,6 +21,7 @@ pub struct TaskManager {
 }
 
 impl TaskManager {
+    #[allow(unused)]
     fn get_current(&self) -> usize {
         self.inner.borrow().current_task
     }
@@ -64,12 +69,13 @@ impl TaskManager {
             .min_by(|a, b| inner.tasks[*a].stride.cmp(&inner.tasks[*b].stride))
     }
 
+    #[allow(unused)]
     fn kill_deadloop_task(&self) {
         let mut inner = self.inner.borrow_mut();
 
         inner
             .tasks
-            .as_mut()
+            .as_mut_slice()
             .into_iter()
             .filter(|task| task.task_status == TaskStatus::Ready)
             .filter(|task| task.total_stride >= MAX_STRIDE)
@@ -77,7 +83,7 @@ impl TaskManager {
     }
 
     fn run_next_task(&self) {
-        self.kill_deadloop_task();
+        // self.kill_deadloop_task();
         // println!("the next task is : {:?}", self.find_next_task());
         if let Some(next) = self.find_next_task() {
             let mut inner = self.inner.borrow_mut();
@@ -100,7 +106,7 @@ impl TaskManager {
 }
 
 struct TaskManagerInner {
-    tasks: [TaskControlBlock; MAX_APP_NUM],
+    tasks: Vec<TaskControlBlock>,
     current_task: usize,
 }
 
@@ -108,12 +114,12 @@ unsafe impl Sync for TaskManager {}
 
 lazy_static! {
     pub static ref TASK_MANAGER: TaskManager = {
+        println!("init TASK_MANAGER");
         let num_app = get_num_app();
-        let mut tasks = [TaskControlBlock::default(); MAX_APP_NUM];
-        for i in 0..num_app {
-            tasks[i].task_cx_ptr = init_app_cx(i) as *const _ as usize;
-            tasks[i].task_status = TaskStatus::Ready;
-        }
+        println!("num_app={}", num_app);
+        let tasks: Vec<_> = (0..num_app)
+            .map(|i| TaskControlBlock::new(get_app_data(i), i))
+            .collect();
         TaskManager {
             num_app,
             inner: RefCell::new(TaskManagerInner {
@@ -154,7 +160,27 @@ pub fn get_current() -> usize {
     TASK_MANAGER.get_current()
 }
 
-
 pub fn set_priority(priority: isize) -> isize {
     TASK_MANAGER.set_priority(priority)
+}
+
+pub fn current_user_token() -> usize {
+    TASK_MANAGER.get_current_token()
+}
+
+pub fn current_trap_cx() -> &'static mut TrapContext {
+    TASK_MANAGER.get_current_trap_cx()
+}
+
+impl TaskManager {
+    fn get_current_token(&self) -> usize {
+        let inner = self.inner.borrow();
+        let current = inner.current_task;
+        inner.tasks[current].get_user_token()
+    }
+    fn get_current_trap_cx(&self) -> &mut TrapContext {
+        let inner = self.inner.borrow();
+        let current = inner.current_task;
+        inner.tasks[current].get_trap_cx()
+    }
 }

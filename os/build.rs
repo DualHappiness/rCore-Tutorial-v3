@@ -1,7 +1,7 @@
 use std::fs::{read_dir, File};
 use std::io::{Result, Write};
 
-static TARGET_PATH: &str = "../tests/user/build/bin/";
+static TARGET_PATH: &str = "../tests/user/build/elf/";
 
 fn main() {
     println!("cargo:return-if-changed=../user/src/");
@@ -42,7 +42,7 @@ _num_app:
     .global app_{0}_start
     .global app_{0}_end
 app_{0}_start:
-    .incbin "{2}{1}.bin"
+    .incbin "{2}{1}.elf"
 app_{0}_end:"#,
             idx, app, TARGET_PATH
         )?;

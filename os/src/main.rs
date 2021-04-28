@@ -3,19 +3,20 @@
 #![feature(global_asm)]
 #![feature(llvm_asm)]
 #![feature(panic_info_message)]
+#![feature(alloc_error_handler)]
 
-
+extern crate alloc;
 #[macro_use]
 mod console;
-mod task;
+mod config;
 mod lang_items;
+mod loader;
+mod mm;
 mod sbi;
 mod syscall;
-mod trap;
-mod config;
-mod loader;
+mod task;
 mod timer;
-
+mod trap;
 
 global_asm!(include_str!("entry.asm"));
 global_asm!(include_str!("link_app.S"));
@@ -24,11 +25,13 @@ use core::usize;
 
 #[no_mangle]
 pub fn rust_main() -> ! {
-    console::init();
     clear_bss();
+    console::init();
     println!("[kernel] Hello, world!");
+    mm::init();
+    println!("[kernel] back to world!");
+    mm::remap_test();
     trap::init();
-    loader::load_apps();
     trap::enable_timer_interrupt();
     timer::set_next_trigger();
     task::run_first_task();

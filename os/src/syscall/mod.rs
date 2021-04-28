@@ -5,6 +5,7 @@ const SYSCALL_EXIT: usize = 93;
 const SYSCALL_YIELD: usize = 124;
 const SYSCALL_GET_TIME: usize = 169;
 const SYSCALL_SET_PRIORITY: usize = 140;
+const SYSCALL_MMAP: usize = 222;
 
 mod fs;
 mod process;

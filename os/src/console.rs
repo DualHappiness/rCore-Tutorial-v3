@@ -15,7 +15,7 @@ pub fn console_putchar(c: usize) {
     crate::sbi::console_putchar(c)
 }
 
-struct Stdout;
+pub struct Stdout;
 
 impl Write for Stdout {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
