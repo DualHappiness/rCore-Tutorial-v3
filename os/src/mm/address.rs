@@ -6,16 +6,16 @@ use core::{
 
 use super::page_table::PageTableEntry;
 
-#[derive(Clone, Copy, Ord, PartialEq, PartialOrd, Eq, Debug)]
+#[derive(Clone, Copy, Ord, PartialEq, PartialOrd, Eq, Debug, Default)]
 pub struct Physical;
-#[derive(Clone, Copy, Ord, PartialEq, PartialOrd, Eq, Debug)]
+#[derive(Clone, Copy, Ord, PartialEq, PartialOrd, Eq, Debug, Default)]
 pub struct Virtual;
-#[derive(Clone, Copy, Ord, PartialEq, PartialOrd, Eq, Debug)]
+#[derive(Clone, Copy, Ord, PartialEq, PartialOrd, Eq, Debug, Default)]
 pub struct Address;
-#[derive(Clone, Copy, Ord, PartialEq, PartialOrd, Eq, Debug)]
+#[derive(Clone, Copy, Ord, PartialEq, PartialOrd, Eq, Debug, Default)]
 pub struct PageNumber;
 
-#[derive(Clone, Copy, Ord, PartialEq, PartialOrd, Eq)]
+#[derive(Clone, Copy, Ord, PartialEq, PartialOrd, Eq, Default)]
 pub struct Warpper<S, T>(pub usize, PhantomData<S>, PhantomData<T>);
 impl<S, T> From<usize> for Warpper<S, T> {
     fn from(v: usize) -> Self {
@@ -63,6 +63,12 @@ impl Debug for PhysAddr {
         f.write_fmt(format_args!("PA:{:#x}", self.0))
     }
 }
+impl PhysAddr {
+    pub fn get_mut<T>(&self) -> &'static mut T {
+        unsafe { (self.0 as *mut T).as_mut().unwrap() }
+    }
+}
+
 impl Debug for PhysPageNum {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!("PPN:{:#x}", self.0))

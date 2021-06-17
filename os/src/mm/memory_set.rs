@@ -132,7 +132,16 @@ impl MapArea {
     }
 }
 
-#[derive(Debug)]
+/// for fork
+impl MapArea {
+    pub fn from_another(another: &Self) -> Self {
+        Self {
+            data_frames: BTreeMap::new(),
+            ..*another
+        }
+    }
+}
+#[derive(Debug, Default)]
 pub struct MemorySet {
     page_table: PageTable,
     areas: Vec<MapArea>,
@@ -309,6 +318,17 @@ impl MemorySet {
         }
         self.areas.push(map_area);
     }
+    pub fn remove_area_with_start_vpn(&mut self, start_vpn: VirtPageNum) {
+        if let Some((idx, area)) = self
+            .areas
+            .iter_mut()
+            .enumerate()
+            .find(|(_, area)| area.vpn_range.get_start() == start_vpn)
+        {
+            area.unmap(&mut self.page_table);
+            self.areas.remove(idx);
+        }
+    }
 
     pub fn alloc(&mut self, start: usize, len: usize, perm: MapPermission) -> Option<usize> {
         let start_va = start.into();
@@ -364,6 +384,29 @@ impl MemorySet {
     }
     pub fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
         self.page_table.translate(vpn)
+    }
+    pub fn recycle_data_pages(&mut self) {
+        self.areas.clear();
+    }
+}
+
+/// for fork
+impl MemorySet {
+    pub fn from_existed_user(user_space: &Self) -> Self {
+        let mut memory_set = Self::new_bare();
+        memory_set.map_trampoline();
+        for area in &user_space.areas {
+            let new_area = MapArea::from_another(area);
+            memory_set.push(new_area, None);
+            for vpn in area.vpn_range {
+                let src_ppn = user_space.translate(vpn).unwrap().ppn();
+                let dst_ppn = memory_set.translate(vpn).unwrap().ppn();
+                dst_ppn
+                    .get_bytes_array()
+                    .copy_from_slice(src_ppn.get_bytes_array());
+            }
+        }
+        memory_set
     }
 }
 

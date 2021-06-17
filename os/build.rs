@@ -4,19 +4,24 @@ use std::io::{Result, Write};
 static TARGET_PATH: &str = "../tests/user/build/elf/";
 
 fn main() {
-    println!("cargo:return-if-changed=../user/src/");
-    println!("cargo:return-if-changed={}", TARGET_PATH);
+    println!("cargo:rerun-if-changed=../user/src/");
+    println!("cargo:rerun-if-changed={}", TARGET_PATH);
     insert_app_data().unwrap();
 }
 
 fn insert_app_data() -> Result<()> {
-    let mut f = File::create("src/link_app.S")?;
-    let mut apps: Vec<_> = read_dir(TARGET_PATH)?
+    let mut f = File::create("src/link_app.S").unwrap();
+    let mut apps: Vec<_> = read_dir(TARGET_PATH)
+        .unwrap()
         .into_iter()
-        .filter_map(|dir| dir.ok())
-        .map(|dir| dir.path().file_stem().unwrap().to_str().unwrap().to_owned())
+        .map(|dir_entry| {
+            let mut name_with_ext = dir_entry.unwrap().file_name().into_string().unwrap();
+            name_with_ext.drain(name_with_ext.find('.').unwrap()..name_with_ext.len());
+            name_with_ext
+        })
         .collect();
     apps.sort();
+
     writeln!(
         f,
         r#"
@@ -33,6 +38,16 @@ _num_app:
     }
     writeln!(f, r#"    .quad app_{}_end"#, apps.len() - 1)?;
 
+    writeln!(
+        f,
+        r#"
+    .global _app_names
+_app_names:"#
+    )?;
+    for app in apps.iter() {
+        writeln!(f, r#"    .string "{}""#, app)?;
+    }
+
     for (idx, app) in apps.iter().enumerate() {
         println!("app_{}: {}", idx, app);
         writeln!(
@@ -41,6 +56,7 @@ _num_app:
     .section .data
     .global app_{0}_start
     .global app_{0}_end
+    .align 3
 app_{0}_start:
     .incbin "{2}{1}.elf"
 app_{0}_end:"#,

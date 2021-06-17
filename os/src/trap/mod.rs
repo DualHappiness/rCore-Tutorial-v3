@@ -1,5 +1,6 @@
 mod context;
 
+use log::warn;
 use riscv::register::{
     mtvec::TrapMode,
     scause::{self, Exception, Trap},
@@ -29,9 +30,7 @@ pub fn trap_from_kernel() -> ! {
 }
 
 fn set_kernel_trap_entry() {
-    unsafe {
-        stvec::write(trap_from_kernel as usize, TrapMode::Direct);
-    }
+    unsafe { stvec::write(trap_from_kernel as usize, TrapMode::Direct) }
 }
 
 pub fn enable_timer_interrupt() {
@@ -43,23 +42,30 @@ pub fn enable_timer_interrupt() {
 #[no_mangle]
 pub fn trap_handler() -> ! {
     set_kernel_trap_entry();
-    let cx = current_trap_cx();
     let scause = scause::read();
     let stval = stval::read();
     match scause.cause() {
         Trap::Exception(Exception::UserEnvCall) => {
+            println!("user trap");
+            let mut cx = current_trap_cx();
             cx.sepc += 4;
-            cx.x[10] = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]) as usize;
+            let result = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]) as usize;
+            cx = current_trap_cx();
+            cx.x[10] = result as usize;
         }
         Trap::Exception(Exception::StoreFault)
         | Trap::Exception(Exception::StorePageFault)
+        | Trap::Exception(Exception::InstructionFault)
+        | Trap::Exception(Exception::InstructionPageFault)
+        | Trap::Exception(Exception::LoadFault)
         | Trap::Exception(Exception::LoadPageFault) => {
-            println!("[kernel] PageFault in application, core dumped.");
-            exit_current_and_run_next();
+            println!("[kernel] {:?} in application, bad addr = {:#x}, bad instruction = {:#x}, core dumped.",
+             scause.cause(), stval, current_trap_cx().sepc);
+            exit_current_and_run_next(-2);
         }
         Trap::Exception(Exception::IllegalInstruction) => {
             println!("[kernel] IllegalInstruction in application, core dumped.");
-            panic!("[kernel] Cannot continue!");
+            exit_current_and_run_next(-3);
         }
         Trap::Interrupt(scause::Interrupt::SupervisorTimer) => {
             set_next_trigger();
@@ -75,13 +81,13 @@ pub fn trap_handler() -> ! {
 }
 
 fn set_user_trap_entry() {
-    unsafe {
-        // va 实际指向最高页, 也就等于指向__alltraps
-        stvec::write(TRAMPOLINE as usize, TrapMode::Direct);
-    }
+    // va 实际指向最高页, 也就等于指向__alltraps
+    unsafe { stvec::write(TRAMPOLINE as usize, TrapMode::Direct) }
 }
 
+#[no_mangle]
 pub fn trap_return() -> ! {
+    warn!("trap return");
     set_user_trap_entry();
     let trap_cx_prt = TRAP_CONTEXT;
     let user_satp = current_user_token();
@@ -90,6 +96,7 @@ pub fn trap_return() -> ! {
         fn __restore();
     }
     let restore_va = __restore as usize - __alltraps as usize + TRAMPOLINE;
+    println!("{:#x}, {:#x}, {:#x}", restore_va, trap_cx_prt, user_satp);
     unsafe {
         llvm_asm!("fence.i" :::: "volatile");
         llvm_asm!("jr $0" :: "r"(restore_va), "{a0}"(trap_cx_prt), "{a1}"(user_satp) :: "volatile");

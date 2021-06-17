@@ -1,14 +1,21 @@
+use alloc::sync::{Arc, Weak};
+use alloc::vec::Vec;
+use log::warn;
 use core::ops::{Add, AddAssign};
+use spin::{Mutex, MutexGuard};
 
 use crate::{
-    config::{kernel_stack_position, BIG_STRIDE, TRAP_CONTEXT},
-    mm::{MapPermission, MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE},
+    config::{BIG_STRIDE, TRAP_CONTEXT},
+    mm::{MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE},
     trap::{trap_handler, TrapContext},
 };
 
-use super::TaskContext;
+use super::{
+    pid::{pid_alloc, KernelStack, PidHandle},
+    TaskContext,
+};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Stride(u8);
 
 impl Eq for Stride {}
@@ -45,59 +52,122 @@ impl AddAssign<u8> for Stride {
     }
 }
 
-#[derive(Debug)]
-pub struct TaskControlBlock {
+#[derive(Debug, Default)]
+pub struct TaskControlBlockInner {
+    pub trap_cx_ppn: PhysPageNum,
+    pub base_size: usize,
     pub task_cx_ptr: usize,
     pub task_status: TaskStatus,
+    pub memory_set: MemorySet,
+    pub parent: Option<Weak<TaskControlBlock>>,
+    pub children: Vec<Arc<TaskControlBlock>>,
+    pub exit_code: i32,
+}
+
+impl TaskControlBlockInner {
+    pub fn get_task_cx_ptr2(&self) -> *const usize {
+        &self.task_cx_ptr as *const usize
+    }
+    pub fn get_trap_cx(&self) -> &'static mut TrapContext {
+        self.trap_cx_ppn.get_mut()
+    }
+    pub fn get_user_token(&self) -> usize {
+        self.memory_set.token()
+    }
+    pub fn get_status(&self) -> TaskStatus {
+        self.task_status
+    }
+    pub fn is_zombie(&self) -> bool {
+        self.get_status() == TaskStatus::Zombie
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct TaskControlBlock {
     pub stride: Stride,
     pub total_stride: usize,
     // pub pass: usize,
     pub priority: u8,
-    pub memory_set: MemorySet,
-    pub trap_cx_ppn: PhysPageNum,
-    pub base_size: usize,
+
+    // immutable
+    pub pid: PidHandle,
+    pub kernel_stack: KernelStack,
+    inner: Mutex<TaskControlBlockInner>,
 }
 
 impl TaskControlBlock {
-    pub fn get_task_cx_ptr2(&self) -> *const usize {
-        &self.task_cx_ptr as *const usize
-    }
+    fn new_block(inner: TaskControlBlockInner) -> (Self, usize) {
+        let pid = pid_alloc();
+        let kernel_stack = KernelStack::new(&pid);
 
-    pub fn get_trap_cx(&self) -> &'static mut TrapContext {
-        self.trap_cx_ppn.get_mut()
+        let kernel_stack_top = kernel_stack.get_top();
+        let task_cx_ptr = kernel_stack.push_on_top(TaskContext::goto_trap_return());
+        let task_control_block = Self {
+            pid,
+            kernel_stack,
+            inner: Mutex::new(TaskControlBlockInner {
+                task_cx_ptr: task_cx_ptr as usize,
+                ..inner
+            }),
+            ..Default::default()
+        };
+        (task_control_block, kernel_stack_top)
     }
-
-    pub fn get_user_token(&self) -> usize {
-        self.memory_set.token()
-    }
-
-    pub fn new(elf_data: &[u8], app_id: usize) -> Self {
+    pub fn new2(elf_data: &[u8]) -> Self {
         let (memory_set, user_sp, entry_point) = MemorySet::from_elf(elf_data);
         let trap_cx_ppn = memory_set
             .translate(VirtAddr::from(TRAP_CONTEXT).into())
             .unwrap()
             .ppn();
-        let task_status = TaskStatus::Ready;
-        let (kernel_stack_bottom, kernel_stack_top) = kernel_stack_position(app_id);
-        crate::mm::KERNEL_SPACE.lock().insert_framed_area(
-            kernel_stack_bottom.into(),
-            kernel_stack_top.into(),
-            MapPermission::R | MapPermission::W,
-        );
-        let task_cx_prt =
-            (kernel_stack_top - core::mem::size_of::<TaskContext>()) as *mut TaskContext;
-        unsafe {
-            *task_cx_prt = TaskContext::goto_trap_return();
-        }
+        // alloc a pid and a kernel stack in kernel space
+        let pid_handle = pid_alloc();
+        println!("pid is {:?}", pid_handle);
+        let kernel_stack = KernelStack::new(&pid_handle);
+        let kernel_stack_top = kernel_stack.get_top();
+        // push a task context which goes to trap_return to the top of kernel stack
+        let task_cx_ptr = kernel_stack.push_on_top(TaskContext::goto_trap_return());
+        warn!("kernel stack top: {:#x}", kernel_stack_top as usize);
+        warn!("task cx ptr: {:#x}", task_cx_ptr as usize);
         let task_control_block = Self {
-            task_cx_ptr: task_cx_prt as usize,
-            task_status,
-            memory_set,
+            pid: pid_handle,
+            kernel_stack,
+            inner: Mutex::new(TaskControlBlockInner {
+                trap_cx_ppn,
+                base_size: user_sp,
+                task_cx_ptr: task_cx_ptr as usize,
+                task_status: TaskStatus::Ready,
+                memory_set,
+                parent: None,
+                children: Vec::new(),
+                exit_code: 0,
+            }),
+            ..Default::default()
+        };
+        // prepare TrapContext in user space
+        let trap_cx = task_control_block.acquire_inner_lock().get_trap_cx();
+        *trap_cx = TrapContext::app_init_context(
+            entry_point,
+            user_sp,
+            KERNEL_SPACE.lock().token(),
+            kernel_stack_top,
+            trap_handler as usize,
+        );
+        task_control_block
+    }
+
+    pub fn new(elf_data: &[u8]) -> Self {
+        let (memory_set, user_sp, entry_point) = MemorySet::from_elf(elf_data);
+        let trap_cx_ppn = memory_set
+            .translate(VirtAddr::from(TRAP_CONTEXT).into())
+            .unwrap()
+            .ppn();
+        let (task_control_block, kernel_stack_top) = Self::new_block(TaskControlBlockInner {
             trap_cx_ppn,
             base_size: user_sp,
-            ..Self::default()
-        };
-        let trap_cx = task_control_block.get_trap_cx();
+            memory_set,
+            ..Default::default()
+        });
+        let trap_cx = task_control_block.acquire_inner_lock().get_trap_cx();
         *trap_cx = TrapContext::app_init_context(
             entry_point,
             user_sp,
@@ -109,25 +179,68 @@ impl TaskControlBlock {
     }
 }
 
-impl Default for TaskControlBlock {
-    fn default() -> Self {
-        Self {
-            task_cx_ptr: 0,
-            task_status: TaskStatus::UnInit,
-            stride: Stride(0),
-            total_stride: 0,
-            priority: 16,
-            memory_set: MemorySet::new_bare(),
-            trap_cx_ppn: 0.into(),
-            base_size: 0,
-        }
+impl TaskControlBlock {
+    pub fn acquire_inner_lock(&self) -> MutexGuard<TaskControlBlockInner> {
+        self.inner.lock()
+    }
+    pub fn getpid(&self) -> usize {
+        self.pid.0
     }
 }
 
+impl TaskControlBlock {
+    pub fn exec(&self, elf_data: &[u8]) {
+        let (memory_set, user_sp, entry_point) = MemorySet::from_elf(elf_data);
+        let trap_cx_ppn = memory_set
+            .translate(VirtAddr::from(TRAP_CONTEXT).into())
+            .unwrap()
+            .ppn();
+
+        let mut inner = self.acquire_inner_lock();
+        inner.memory_set = memory_set;
+        inner.trap_cx_ppn = trap_cx_ppn;
+        let trap_cx = inner.get_trap_cx();
+        *trap_cx = TrapContext::app_init_context(
+            entry_point,
+            user_sp,
+            KERNEL_SPACE.lock().token(),
+            self.kernel_stack.get_top(),
+            trap_handler as usize,
+        );
+    }
+    pub fn fork(self: &Arc<Self>) -> Arc<Self> {
+        let mut parent_inner = self.acquire_inner_lock();
+        let memory_set = MemorySet::from_existed_user(&parent_inner.memory_set);
+        let trap_cx_ppn = memory_set
+            .translate(VirtAddr::from(TRAP_CONTEXT).into())
+            .unwrap()
+            .ppn();
+
+        let (tcb_inner, kernel_stack_top) = Self::new_block(TaskControlBlockInner {
+            trap_cx_ppn,
+            base_size: parent_inner.base_size,
+            memory_set,
+            parent: Some(Arc::downgrade(self)),
+            ..Default::default()
+        });
+        let task_control_block = Arc::new(tcb_inner);
+        parent_inner.children.push(task_control_block.clone());
+
+        let trap_cx = task_control_block.acquire_inner_lock().get_trap_cx();
+        trap_cx.kernel_sp = kernel_stack_top;
+
+        task_control_block
+    }
+}
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum TaskStatus {
-    UnInit,
     Ready,
     Running,
-    Exited,
+    Zombie,
+}
+
+impl Default for TaskStatus {
+    fn default() -> Self {
+        Self::Ready
+    }
 }
