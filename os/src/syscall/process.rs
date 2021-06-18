@@ -1,3 +1,5 @@
+use core::convert::TryInto;
+
 use alloc::sync::Arc;
 
 use crate::{
@@ -53,6 +55,7 @@ pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut i32) -> isize {
             }
         }
     }
+    // log::warn!("{:?}\n", crate::mm::frame_allocator::FRAME_ALLOCATOR.lock());
     ret
 }
 
@@ -99,11 +102,7 @@ pub fn sys_spawn(path: *const u8) -> isize {
 }
 
 pub fn sys_set_priority(priority: isize) -> isize {
-    if priority < 0 || priority > u8::MAX as isize {
-        -1
-    } else {
-        current_task().unwrap().set_priority(priority as u8)
-    }
+    current_task().unwrap().set_priority(priority)
 }
 
 pub fn sys_mmap(start: usize, len: usize, prot: usize) -> isize {
@@ -114,8 +113,10 @@ pub fn sys_mmap(start: usize, len: usize, prot: usize) -> isize {
         return 0;
     }
     let perm = MapPermission::from_bits_truncate((prot as u8) << 1);
-    // crate::task::alloc(start, len, perm).map_or(-1, |size| size as isize)
-    todo!()
+    current_task()
+        .unwrap()
+        .alloc(start, len, perm)
+        .map_or(-1, |size| size as isize)
 }
 
 pub fn sys_munmap(start: usize, len: usize) -> isize {
@@ -125,6 +126,8 @@ pub fn sys_munmap(start: usize, len: usize) -> isize {
     if len == 0 {
         return 0;
     }
-    todo!()
-    // crate::task::dealloc(start, len).map_or(-1, |size| size as isize)
+    current_task()
+        .unwrap()
+        .dealloc(start, len)
+        .map_or(-1, |size| size as isize)
 }

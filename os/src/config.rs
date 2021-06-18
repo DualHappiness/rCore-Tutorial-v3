@@ -7,7 +7,7 @@ pub const BIG_STRIDE: u8 = 255;
 pub const MAX_PRIORITY: u8 = 2;
 pub const MAX_STRIDE: usize = usize::MAX / 2;
 
-pub const KERNEL_HEAP_SIZE: usize = 0x20_0000;
+pub const KERNEL_HEAP_SIZE: usize = 0x10_0000;
 pub const MEMORY_END: usize = 0x80800000;
 pub const PAGE_SIZE: usize = 0x1000;
 pub const PAGE_SIZE_BITS: usize = 0xc;

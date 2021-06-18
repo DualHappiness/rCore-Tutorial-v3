@@ -5,7 +5,7 @@ use spin::{Mutex, MutexGuard};
 
 use crate::{
     config::{BIG_STRIDE, MAX_PRIORITY, TRAP_CONTEXT},
-    mm::{MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE},
+    mm::{MapPermission, MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE},
     trap::{trap_handler, TrapContext},
 };
 
@@ -219,13 +219,22 @@ impl TaskControlBlock {
 }
 
 impl TaskControlBlock {
-    pub fn set_priority(&self, priority: u8) -> isize {
-        if priority >= MAX_PRIORITY {
-            self.acquire_inner_lock().priority = priority;
-            0
-        } else {
+    pub fn set_priority(&self, priority: isize) -> isize {
+        if priority < MAX_PRIORITY as isize {
             -1
+        } else {
+            self.acquire_inner_lock().priority = priority.max(u8::MAX as isize) as u8;
+            priority
         }
+    }
+}
+
+impl TaskControlBlock {
+    pub fn alloc(&self, start: usize, len: usize, perm: MapPermission) -> Option<usize> {
+        self.acquire_inner_lock().memory_set.alloc(start, len, perm)
+    }
+    pub fn dealloc(&self, start: usize, len: usize) -> Option<usize> {
+        self.acquire_inner_lock().memory_set.dealloc(start, len)
     }
 }
 

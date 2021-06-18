@@ -75,6 +75,16 @@ impl FrameAllocator for StackFrameAllocator {
     }
 }
 
+impl core::fmt::Debug for StackFrameAllocator {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        writeln!(
+            f,
+            "StackFrameAllocator: last {} Physical Frames.",
+            self.end - self.current + self.recycled.len()
+        )
+    }
+}
+
 type FrameAllocatorImpl = StackFrameAllocator;
 lazy_static! {
     pub static ref FRAME_ALLOCATOR: Mutex<FrameAllocatorImpl> =
