@@ -1,7 +1,6 @@
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use core::ops::{Add, AddAssign};
-use log::warn;
 use spin::{Mutex, MutexGuard};
 
 use crate::{
@@ -82,7 +81,8 @@ impl TaskControlBlockInner {
     }
 }
 
-#[derive(Debug, Default)]
+// ! 这里千万不能使用default来图方便 因为内部实现了drop的字段会把自己释放调
+#[derive(Debug)]
 pub struct TaskControlBlock {
     // pub stride: Stride,
     // pub total_stride: usize,
@@ -108,8 +108,6 @@ impl TaskControlBlock {
             kernel_stack,
             inner,
         };
-        println!("{:#x}", task_cx_ptr as usize);
-        println!("{:#x}", kernel_stack_top as usize);
         (task_control_block, kernel_stack_top)
     }
     pub fn new(elf_data: &[u8]) -> Self {
@@ -118,16 +116,13 @@ impl TaskControlBlock {
             .translate(VirtAddr::from(TRAP_CONTEXT).into())
             .unwrap()
             .ppn();
-        println!("{:?}", memory_set);
-        // alloc a pid and a kernel stack in kernel space
-        let (task_control_block, kernel_stack_top) = Self::new_block(Mutex::new(TaskControlBlockInner {
-            trap_cx_ppn,
-            base_size: user_sp,
-            memory_set,
-            ..Default::default()
-        }));
-        // println!("{:?}", task_control_block);
-
+        let (task_control_block, kernel_stack_top) =
+            Self::new_block(Mutex::new(TaskControlBlockInner {
+                trap_cx_ppn,
+                base_size: user_sp,
+                memory_set,
+                ..Default::default()
+            }));
         let trap_cx = task_control_block.acquire_inner_lock().get_trap_cx();
         *trap_cx = TrapContext::app_init_context(
             entry_point,

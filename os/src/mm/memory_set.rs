@@ -47,7 +47,7 @@ bitflags! {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MapArea {
     vpn_range: VPNRange,
     data_frames: BTreeMap<VirtPageNum, FrameTracker>,
@@ -141,7 +141,7 @@ impl MapArea {
         }
     }
 }
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct MemorySet {
     page_table: PageTable,
     areas: Vec<MapArea>,

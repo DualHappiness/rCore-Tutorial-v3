@@ -64,7 +64,7 @@ pub fn kernel_stack_position(app_id: usize) -> (usize, usize) {
 
 #[derive(Debug, Default)]
 pub struct KernelStack {
-    pid: usize,
+    pub pid: usize,
 }
 
 impl KernelStack {
