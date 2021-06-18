@@ -1,6 +1,5 @@
 mod context;
 
-use log::warn;
 use riscv::register::{
     mtvec::TrapMode,
     scause::{self, Exception, Trap},
@@ -46,7 +45,6 @@ pub fn trap_handler() -> ! {
     let stval = stval::read();
     match scause.cause() {
         Trap::Exception(Exception::UserEnvCall) => {
-            println!("user trap");
             let mut cx = current_trap_cx();
             cx.sepc += 4;
             let result = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]) as usize;
@@ -87,7 +85,6 @@ fn set_user_trap_entry() {
 
 #[no_mangle]
 pub fn trap_return() -> ! {
-    warn!("trap return");
     set_user_trap_entry();
     let trap_cx_prt = TRAP_CONTEXT;
     let user_satp = current_user_token();
@@ -96,7 +93,6 @@ pub fn trap_return() -> ! {
         fn __restore();
     }
     let restore_va = __restore as usize - __alltraps as usize + TRAMPOLINE;
-    println!("{:#x}, {:#x}, {:#x}", restore_va, trap_cx_prt, user_satp);
     unsafe {
         llvm_asm!("fence.i" :::: "volatile");
         llvm_asm!("jr $0" :: "r"(restore_va), "{a0}"(trap_cx_prt), "{a1}"(user_satp) :: "volatile");

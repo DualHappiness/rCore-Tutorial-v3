@@ -3,13 +3,9 @@ use core::cell::RefCell;
 use alloc::sync::Arc;
 use lazy_static::lazy_static;
 
-use crate::trap::TrapContext;
+use crate::{config::BIG_STRIDE, trap::TrapContext};
 
-use super::{
-    manager::fetch_task,
-    switch::__switch,
-    task::{TaskControlBlock, TaskStatus},
-};
+use super::{add_task, manager::fetch_task, switch::__switch, task::{TaskControlBlock, TaskStatus}};
 type Task = Arc<TaskControlBlock>;
 
 #[derive(Default)]
@@ -79,14 +75,11 @@ impl Processor {
                 let mut task_inner = task.acquire_inner_lock();
                 let next_task_cx_ptr2 = task_inner.get_task_cx_ptr2();
                 task_inner.task_status = TaskStatus::Running;
+                let pass = BIG_STRIDE / task_inner.priority;
+                task_inner.stride += pass;
+                task_inner.total_stride += pass as usize;
                 drop(task_inner);
 
-                unsafe {
-                    println!(
-                        "task switch: {:?}, {:#x}",
-                        *idle_task_cx_ptr2, *next_task_cx_ptr2
-                    );
-                }
                 self.inner.borrow_mut().current = Some(task);
                 unsafe { __switch(idle_task_cx_ptr2, next_task_cx_ptr2) }
             }

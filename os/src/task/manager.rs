@@ -1,3 +1,5 @@
+use crate::config::MAX_STRIDE;
+
 use super::task::TaskControlBlock;
 use alloc::{collections::VecDeque, sync::Arc};
 use lazy_static::lazy_static;
@@ -16,7 +18,24 @@ impl TaskManager {
         self.ready_queue.push_back(task);
     }
     pub fn fetch(&mut self) -> Option<Arc<TaskControlBlock>> {
-        self.ready_queue.pop_front()
+        self.kill_deadloop_task();
+        match self
+            .ready_queue
+            .iter()
+            .enumerate()
+            .min_by(|(_, a), (_, b)| {
+                a.acquire_inner_lock()
+                    .stride
+                    .cmp(&b.acquire_inner_lock().stride)
+            }) {
+            None => None,
+            Some((index, _)) => self.ready_queue.swap_remove_front(index),
+        }
+    }
+
+    fn kill_deadloop_task(&mut self) {
+        self.ready_queue
+            .retain(|task| task.acquire_inner_lock().total_stride < MAX_STRIDE);
     }
 }
 
