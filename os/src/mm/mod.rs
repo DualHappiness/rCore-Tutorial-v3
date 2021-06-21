@@ -6,12 +6,13 @@ mod page_table;
 
 // use page_table::{PageTable, PTEFlags};
 // use address::{VPNRange, StepByOne};
-pub use address::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum, StepByOne};
+pub use address::{PhysAddr, PhysPageNum, StepByOne, VirtAddr, VirtPageNum};
 pub use frame_allocator::{frame_alloc, FrameTracker};
 pub use memory_set::remap_test;
 pub use memory_set::{MapPermission, MemorySet, KERNEL_SPACE};
 pub use page_table::{
-    translated_refmut, translated_str, translated_byte_buffer, translate, PageTableEntry,
+    translate, translated_byte_buffer, translated_refmut, translated_str, PageTableEntry,
+    UserBuffer,
 };
 
 pub fn init() {

@@ -5,7 +5,7 @@ mod processor;
 mod switch;
 mod task;
 
-pub use manager::add_task;
+pub use manager::{add_task, get_maillist, add_mailist};
 pub use processor::{current_task, current_trap_cx, current_user_token, run_tasks};
 use task::TaskStatus;
 

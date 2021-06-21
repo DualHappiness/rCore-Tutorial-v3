@@ -5,7 +5,11 @@ use lazy_static::lazy_static;
 
 use crate::{config::BIG_STRIDE, trap::TrapContext};
 
-use super::{add_task, manager::fetch_task, switch::__switch, task::{TaskControlBlock, TaskStatus}};
+use super::{
+    manager::fetch_task,
+    switch::__switch,
+    task::{TaskControlBlock, TaskStatus},
+};
 type Task = Arc<TaskControlBlock>;
 
 #[derive(Default)]
@@ -42,7 +46,11 @@ impl Processor {
         self.inner.borrow_mut().current.take()
     }
     pub fn current(&self) -> Option<Task> {
-        self.inner.borrow().current.as_ref().map(|task| Arc::clone(task))
+        self.inner
+            .borrow()
+            .current
+            .as_ref()
+            .map(|task| Arc::clone(task))
         // self.inner.borrow().current.clone()
     }
 }

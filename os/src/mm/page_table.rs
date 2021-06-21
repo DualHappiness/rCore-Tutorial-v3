@@ -138,8 +138,9 @@ impl PageTable {
         })
     }
 }
+type ByteBuffer = Vec<&'static mut [u8]>;
 
-pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&'static mut [u8]> {
+pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Option<ByteBuffer> {
     let page_table = PageTable::from_token(token);
     let mut start = ptr as usize;
     let end = start + len;
@@ -147,7 +148,10 @@ pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&
     while start < end {
         let start_va = VirtAddr::from(start);
         let mut vpn = start_va.floor();
-        let ppn = page_table.translate(vpn).unwrap().ppn();
+        let ppn = match page_table.translate(vpn) {
+            None => return None,
+            Some(entry) => entry.ppn(),
+        };
         vpn.step();
         let end_va: VirtAddr = VirtAddr::from(end).min(vpn.into());
         let offset = if end_va.page_offset() == 0 {
@@ -158,7 +162,7 @@ pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&
         v.push(&mut ppn.get_bytes_array()[start_va.page_offset()..offset]);
         start = end_va.into();
     }
-    v
+    Some(v)
 }
 
 pub fn translate<T>(token: usize, ptr: *mut T) -> &'static mut T {
@@ -195,4 +199,54 @@ pub fn translated_refmut<T>(token: usize, ptr: *mut T) -> &'static mut T {
         .translate_va(VirtAddr::from(va))
         .unwrap()
         .get_mut()
+}
+
+pub struct UserBuffer {
+    pub buffers: ByteBuffer,
+}
+
+impl UserBuffer {
+    pub fn new(buffers: ByteBuffer) -> Self {
+        Self { buffers }
+    }
+    pub fn len(&self) -> usize {
+        self.buffers.iter().map(|b| b.len()).sum()
+    }
+}
+
+impl IntoIterator for UserBuffer {
+    type Item = *mut u8;
+    type IntoIter = UserBufferIterator;
+    fn into_iter(self) -> Self::IntoIter {
+        UserBufferIterator {
+            buffers: self.buffers,
+            current_buffer: 0,
+            current_idx: 0,
+        }
+    }
+}
+
+pub struct UserBufferIterator {
+    buffers: Vec<&'static mut [u8]>,
+    current_buffer: usize,
+    current_idx: usize,
+}
+
+impl Iterator for UserBufferIterator {
+    type Item = *mut u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current_buffer >= self.buffers.len() {
+            None
+        } else {
+            let r = &mut self.buffers[self.current_buffer][self.current_idx] as *mut _;
+            if self.current_idx + 1 == self.buffers[self.current_buffer].len() {
+                self.current_buffer += 1;
+                self.current_idx = 0;
+            } else {
+                self.current_idx += 1;
+            }
+            Some(r)
+        }
+    }
 }

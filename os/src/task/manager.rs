@@ -1,9 +1,10 @@
-use crate::config::MAX_STRIDE;
+use crate::{config::MAX_STRIDE, fs::MailList};
+use alloc::vec::Vec;
 
 use super::task::TaskControlBlock;
 use alloc::{collections::VecDeque, sync::Arc};
 use lazy_static::lazy_static;
-use spin::Mutex;
+use spin::{Mutex, RwLock};
 
 #[derive(Default)]
 pub struct TaskManager {
@@ -49,4 +50,34 @@ pub fn add_task(task: Arc<TaskControlBlock>) {
 
 pub fn fetch_task() -> Option<Arc<TaskControlBlock>> {
     TASK_MANAGER.lock().fetch()
+}
+
+pub struct MailManager {
+    mail_lists: Vec<Arc<MailList>>,
+}
+unsafe impl Sync for MailManager {}
+impl MailManager {
+    pub fn new() -> Self {
+        Self {
+            mail_lists: Vec::new(),
+        }
+    }
+}
+
+lazy_static! {
+    pub static ref MAIL_MANAGER: RwLock<MailManager> = RwLock::new(MailManager::new());
+}
+
+pub fn get_maillist(pid: usize) -> Arc<MailList> {
+    MAIL_MANAGER.read().mail_lists[pid].clone()
+}
+
+pub fn add_mailist(pid: usize) {
+    let mut manager = MAIL_MANAGER.write();
+    if manager.mail_lists.len() < pid + 1 {
+        while manager.mail_lists.len() < pid + 1 {
+            manager.mail_lists.push(Arc::new(MailList::new()));
+        }
+    }
+    manager.mail_lists[pid].clear();
 }

@@ -1,15 +1,18 @@
 use alloc::sync::{Arc, Weak};
+use alloc::vec;
 use alloc::vec::Vec;
 use core::ops::{Add, AddAssign};
 use spin::{Mutex, MutexGuard};
 
 use crate::{
     config::{BIG_STRIDE, MAX_PRIORITY, TRAP_CONTEXT},
+    fs::{File, Stdin, Stdout},
     mm::{MapPermission, MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE},
     trap::{trap_handler, TrapContext},
 };
 
 use super::{
+    add_mailist,
     pid::{pid_alloc, KernelStack, PidHandle},
     TaskContext,
 };
@@ -51,7 +54,7 @@ impl AddAssign<u8> for Stride {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct TaskControlBlockInner {
     pub trap_cx_ppn: PhysPageNum,
     pub base_size: usize,
@@ -67,6 +70,32 @@ pub struct TaskControlBlockInner {
     pub total_stride: usize,
     // pub pass: usize,
     pub priority: u8,
+
+    //
+    pub fd_table: Vec<Option<Arc<dyn File>>>,
+}
+
+impl Default for TaskControlBlockInner {
+    fn default() -> Self {
+        Self {
+            trap_cx_ppn: Default::default(),
+            base_size: Default::default(),
+            task_cx_ptr: Default::default(),
+            task_status: TaskStatus::Ready,
+            memory_set: Default::default(),
+            parent: None,
+            children: Vec::new(),
+            exit_code: 0,
+            stride: Stride(0),
+            total_stride: 0,
+            priority: 16,
+            fd_table: vec![
+                Some(Arc::new(Stdin)),
+                Some(Arc::new(Stdout)),
+                Some(Arc::new(Stdout)),
+            ],
+        }
+    }
 }
 
 impl TaskControlBlockInner {
@@ -84,6 +113,23 @@ impl TaskControlBlockInner {
     }
     pub fn is_zombie(&self) -> bool {
         self.get_status() == TaskStatus::Zombie
+    }
+}
+
+impl TaskControlBlockInner {
+    pub fn alloc_fd(&mut self) -> usize {
+        match self
+            .fd_table
+            .iter()
+            .enumerate()
+            .find(|(_, file)| file.is_none())
+        {
+            Some((fd, _)) => fd,
+            None => {
+                self.fd_table.push(None);
+                self.fd_table.len() - 1
+            }
+        }
     }
 }
 
@@ -110,6 +156,7 @@ impl TaskControlBlock {
             kernel_stack,
             inner: Mutex::new(inner),
         };
+        add_mailist(task_control_block.pid.0);
         (task_control_block, kernel_stack_top)
     }
     pub fn new(elf_data: &[u8]) -> Self {
@@ -173,11 +220,13 @@ impl TaskControlBlock {
             .unwrap()
             .ppn();
 
+        let new_fd_table = parent_inner.fd_table.clone();
         let (tcb_inner, kernel_stack_top) = Self::new_block(TaskControlBlockInner {
             trap_cx_ppn,
             base_size: parent_inner.base_size,
             memory_set,
             parent: Some(Arc::downgrade(self)),
+            fd_table: new_fd_table,
             ..Default::default()
         });
         let task_control_block = Arc::new(tcb_inner);

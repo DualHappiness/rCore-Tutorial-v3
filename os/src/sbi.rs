@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use core::usize;
 const SBI_SHUTDOWN: usize = 8;
 const SBI_SET_TIMER: usize = 0;
