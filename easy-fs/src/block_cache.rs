@@ -41,10 +41,13 @@ impl BlockCache {
         let addr = self.get::<T>(offset);
         unsafe { &*(addr as *const T) }
     }
-    pub fn get_mut<T>(&self, offset: usize) -> &mut T
+    pub fn get_mut<T>(&mut self, offset: usize) -> &mut T
     where
         T: Sized,
     {
+        let type_sized = core::mem::size_of::<T>();
+        assert!(offset + type_sized <= BLOCK_SIZE);
+        self.modified = true;
         let addr = self.get::<T>(offset);
         unsafe { &mut *(addr as *mut T) }
     }
@@ -106,8 +109,8 @@ impl BlockCacheManager {
         match self.queue.iter().find(|pair| pair.0 == block_id) {
             Some((_, block)) => block.clone(),
             None => {
-                let block = Arc::new(Mutex::new(BlockCache::new(block_id, block_device.clone())));
                 self.check_queue_size().expect("run out of block cache!");
+                let block = Arc::new(Mutex::new(BlockCache::new(block_id, block_device.clone())));
                 self.queue.push_back((block_id, block.clone()));
                 block
             }

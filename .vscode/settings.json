@@ -1,4 +1,4 @@
 {
     "rust-analyzer.checkOnSave.allTargets": false,
-    "rust-analyzer.checkOnSave.target": "riscv64gc-unknown-none-elf",
+    "rust-analyzer.checkOnSave.target": "x86_64-unknown-linux-gnu",
 }

@@ -57,7 +57,6 @@ impl Bitmap {
 }
 impl Bitmap {
     pub fn maximum(&self) -> usize {
-        todo!()
+        self.blocks * BLOCK_BITS
     }
 }
-

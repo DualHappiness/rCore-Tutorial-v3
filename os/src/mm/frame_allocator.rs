@@ -112,7 +112,6 @@ pub fn frame_dealloc(ppn: PhysPageNum) {
     FRAME_ALLOCATOR.lock().dealloc(ppn)
 }
 
-#[test]
 #[allow(unused)]
 pub fn frame_allocator_test() {
     let mut v = Vec::new();
