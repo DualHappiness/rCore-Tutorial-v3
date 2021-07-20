@@ -5,7 +5,7 @@ mod processor;
 mod switch;
 mod task;
 
-pub use manager::{add_task, get_maillist, add_mailist};
+pub use manager::{add_mailist, add_task, get_maillist};
 pub use processor::{current_task, current_trap_cx, current_user_token, run_tasks};
 use task::TaskStatus;
 
@@ -13,7 +13,7 @@ use self::{
     processor::{schedule, take_current_task},
     task::TaskControlBlock,
 };
-use crate::loader::get_app_data_by_name;
+use crate::fs::{open_file, OpenFlags};
 use alloc::sync::Arc;
 pub use context::TaskContext;
 use lazy_static::lazy_static;
@@ -22,8 +22,9 @@ type Task = Arc<TaskControlBlock>;
 
 lazy_static! {
     pub static ref INITPROC: Task = {
-        let name = option_env!("ENTRY").unwrap();
-        Arc::new(TaskControlBlock::new(get_app_data_by_name(name).unwrap()))
+        let inode = open_file("initproc", OpenFlags::READ_ONLY).unwrap();
+        let v = inode.read_all();
+        Arc::new(TaskControlBlock::new(v.as_slice()))
     };
 }
 

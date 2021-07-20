@@ -16,6 +16,7 @@ pub struct Address;
 pub struct PageNumber;
 
 #[derive(Clone, Copy, Ord, PartialEq, PartialOrd, Eq, Default)]
+#[repr(C)]
 pub struct Warpper<S, T>(pub usize, PhantomData<S>, PhantomData<T>);
 impl<S, T> From<usize> for Warpper<S, T> {
     fn from(v: usize) -> Self {
@@ -64,6 +65,9 @@ impl Debug for PhysAddr {
     }
 }
 impl PhysAddr {
+    pub fn get_ref<T>(&self) -> &'static T {
+        unsafe { (self.0 as *const T).as_ref().unwrap() }
+    }
     pub fn get_mut<T>(&self) -> &'static mut T {
         unsafe { (self.0 as *mut T).as_mut().unwrap() }
     }
@@ -124,7 +128,7 @@ pub trait StepByOne {
     fn step(&mut self);
 }
 
-impl StepByOne for VirtPageNum {
+impl<T> StepByOne for PageNum<T> {
     fn step(&mut self) {
         self.0 += 1;
     }

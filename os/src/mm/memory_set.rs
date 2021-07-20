@@ -4,7 +4,7 @@ use lazy_static::*;
 use spin::Mutex;
 
 use crate::{
-    config::{MEMORY_END, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE},
+    config::{MEMORY_END, MMIO, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE},
     mm::address::StepByOne,
 };
 
@@ -30,6 +30,9 @@ extern "C" {
 lazy_static! {
     pub static ref KERNEL_SPACE: Arc<Mutex<MemorySet>> =
         Arc::new(Mutex::new(MemorySet::new_kernel()));
+}
+pub fn kernel_token() -> usize {
+    KERNEL_SPACE.lock().token()
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -222,6 +225,19 @@ impl MemorySet {
             ),
             None,
         );
+
+        println!("mapping memory-mapped  registers");
+        for pair in MMIO {
+            memory_set.push(
+                MapArea::new(
+                    pair.0.into(),
+                    (pair.0 + pair.1).into(),
+                    MapType::Identical,
+                    MapPermission::R | MapPermission::W,
+                ),
+                None,
+            );
+        }
         memory_set
     }
     /// Include sections in elf and trampoline and TrapContext and user stack,

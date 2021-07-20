@@ -40,7 +40,7 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         // process
         SYSCALL_GETPID => sys_getpid(),
         SYSCALL_FORK => sys_fork(),
-        SYSCALL_EXEC => sys_exec(args[0] as *const u8),
+        SYSCALL_EXEC => sys_exec(args[0] as *const u8, args[1] as *const usize),
         SYSCALL_WAITPID => sys_waitpid(args[0] as isize, args[1] as *mut i32),
         SYSCALL_SPAWN => sys_spawn(args[0] as *const u8),
         // priority

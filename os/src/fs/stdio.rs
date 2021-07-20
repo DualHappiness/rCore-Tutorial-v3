@@ -25,6 +25,14 @@ impl File for Stdin {
     fn write(&self, _buf: crate::mm::UserBuffer) -> usize {
         panic!("Caonot write to stdin!");
     }
+
+    fn readable(&self) -> bool {
+        true
+    }
+
+    fn writable(&self) -> bool {
+        false
+    }
 }
 
 #[derive(Debug)]
@@ -39,5 +47,13 @@ impl File for Stdout {
             print!("{}", core::str::from_utf8(*buffer).unwrap());
         }
         buf.len()
+    }
+
+    fn readable(&self) -> bool {
+        false
+    }
+
+    fn writable(&self) -> bool {
+        true
     }
 }

@@ -25,6 +25,7 @@ pub fn init() {
 
 #[no_mangle]
 pub fn trap_from_kernel() -> ! {
+    println!("kernel trap cause: {:?}", scause::read().cause());
     panic!("a trap from kernel!");
 }
 

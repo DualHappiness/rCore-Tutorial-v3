@@ -9,10 +9,10 @@ mod page_table;
 pub use address::{PhysAddr, PhysPageNum, StepByOne, VirtAddr, VirtPageNum};
 pub use frame_allocator::{frame_alloc, FrameTracker};
 pub use memory_set::remap_test;
-pub use memory_set::{MapPermission, MemorySet, KERNEL_SPACE};
+pub use memory_set::{kernel_token, MapPermission, MemorySet, KERNEL_SPACE};
 pub use page_table::{
-    translate, translated_byte_buffer, translated_refmut, translated_str, PageTableEntry,
-    UserBuffer,
+    translate, translated_byte_buffer, translated_ref, translated_refmut, translated_str,
+    PageTable, PageTableEntry, UserBuffer,
 };
 
 pub fn init() {

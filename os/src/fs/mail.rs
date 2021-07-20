@@ -2,7 +2,8 @@ use spin::Mutex;
 
 use super::File;
 
-const MAX_SLOT_SIZE: usize = 16;
+// ! 这地方大了之后可能会导致在换页 但内核换页没处理 所以会有一定的问题
+const MAX_SLOT_SIZE: usize = 8;
 const MAX_MAIL_SIZE: usize = 256;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -127,5 +128,13 @@ impl File for MailList {
         mail.len = write_size;
         self.buffers.lock().write(mail);
         write_size
+    }
+
+    fn readable(&self) -> bool {
+        self.is_readable()
+    }
+
+    fn writable(&self) -> bool {
+        self.is_writable()
     }
 }

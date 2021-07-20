@@ -8,7 +8,7 @@ pub const MAX_PRIORITY: u8 = 2;
 pub const MAX_STRIDE: usize = usize::MAX / 2;
 
 pub const KERNEL_HEAP_SIZE: usize = 0x10_0000;
-pub const MEMORY_END: usize = 0x88800000;
+pub const MEMORY_END: usize = 0x80800000;
 pub const PAGE_SIZE: usize = 0x1000;
 pub const PAGE_SIZE_BITS: usize = 0xc;
 
@@ -17,3 +17,4 @@ pub const TRAP_CONTEXT: usize = TRAMPOLINE - PAGE_SIZE;
 
 pub const MAX_ALLOC_SIZE: usize = 0x1_000_000_000;
 
+pub const MMIO: &[(usize, usize)] = &[(0x10001000, 0x1000)];

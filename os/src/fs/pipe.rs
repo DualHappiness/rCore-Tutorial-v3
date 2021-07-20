@@ -154,6 +154,14 @@ impl File for Pipe {
             }
         }
     }
+
+    fn readable(&self) -> bool {
+        self.readable
+    }
+
+    fn writable(&self) -> bool {
+        self.writable
+    }
 }
 
 pub fn make_pipe() -> (Arc<Pipe>, Arc<Pipe>) {
