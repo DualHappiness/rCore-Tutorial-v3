@@ -73,7 +73,6 @@ pub fn get_maillist(pid: usize) -> Arc<MailList> {
 }
 
 pub fn add_mailist(pid: usize) {
-    println!("mail pid is {:#x}", pid);
     let mut manager = MAIL_MANAGER.write();
     if manager.mail_lists.len() < pid + 1 {
         while manager.mail_lists.len() < pid + 1 {

@@ -1,5 +1,10 @@
 use crate::timer::TimeVal;
 
+const SYSCALL_DUP: usize = 24;
+const SYSCALL_UNLINKAT: usize = 35;
+const SYSCALL_LINKAT: usize = 37;
+const SYSCALL_FSTAT: usize = 80;
+const SYSCALL_OPEN: usize = 56;
 const SYSCALL_CLOSE: usize = 57;
 const SYSCALL_PIPE: usize = 59;
 const SYSCALL_READ: usize = 63;
@@ -21,10 +26,13 @@ const SYSCALL_MAILWRITE: usize = 402;
 mod fs;
 mod process;
 
+use easy_fs::Stat;
 use fs::*;
+use log::debug;
 use process::*;
 
-pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
+pub fn syscall(syscall_id: usize, args: [usize; 5]) -> isize {
+    debug!("system call : {}", syscall_id);
     match syscall_id {
         // io
         SYSCALL_CLOSE => sys_close(args[0]),
@@ -37,6 +45,23 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_EXIT => sys_exit(args[0] as i32),
         SYSCALL_YIELD => sys_yield(),
         SYSCALL_GET_TIME => sys_get_time(args[0] as *mut TimeVal),
+
+        SYSCALL_DUP => sys_dup(args[0] as usize),
+        SYSCALL_OPEN => sys_open(
+            args[0] as i32,
+            args[1] as *const u8,
+            args[2] as u32,
+            args[3] as u32,
+        ),
+        SYSCALL_LINKAT => sys_linkat(
+            args[0] as i32,
+            args[1] as *const u8,
+            args[2] as i32,
+            args[3] as *const u8,
+            args[4] as u32,
+        ),
+        SYSCALL_UNLINKAT => sys_unlinkat(args[0] as i32, args[1] as *const u8, args[2] as u32),
+        SYSCALL_FSTAT => sys_fstat(args[0] as i32, args[1] as *mut Stat),
         // process
         SYSCALL_GETPID => sys_getpid(),
         SYSCALL_FORK => sys_fork(),

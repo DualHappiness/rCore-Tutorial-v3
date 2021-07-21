@@ -137,4 +137,8 @@ impl File for MailList {
     fn writable(&self) -> bool {
         self.is_writable()
     }
+
+    fn fstat(&self, _st: &mut easy_fs::Stat) -> isize {
+        -1
+    }
 }

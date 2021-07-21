@@ -1,5 +1,6 @@
 use alloc::vec::Vec;
 use lazy_static::*;
+use log::debug;
 use spin::Mutex;
 
 use crate::config::{KERNEL_STACK_SIZE, PAGE_SIZE, TRAMPOLINE};
@@ -97,7 +98,8 @@ impl KernelStack {
 
 impl Drop for KernelStack {
     fn drop(&mut self) {
-        println!("drop kernel stack: {}", self.pid);
+        debug!("drop kernel stack: {}", self.pid);
+        
         let (kernel_stack_bottom, _) = kernel_stack_position(self.pid);
         let kernel_stack_bottom_va: VirtAddr = kernel_stack_bottom.into();
         KERNEL_SPACE

@@ -33,6 +33,9 @@ impl File for Stdin {
     fn writable(&self) -> bool {
         false
     }
+    fn fstat(&self, _st: &mut easy_fs::Stat) -> isize {
+        -1
+    }
 }
 
 #[derive(Debug)]
@@ -55,5 +58,8 @@ impl File for Stdout {
 
     fn writable(&self) -> bool {
         true
+    }
+    fn fstat(&self, _st: &mut easy_fs::Stat) -> isize {
+        -1
     }
 }

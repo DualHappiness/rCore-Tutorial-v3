@@ -30,6 +30,10 @@ impl BlockDevice for VirtIOBlock {
             .write_block(block_id, buf)
             .expect("Error when writing VirtIOBlk");
     }
+    fn get_dev_id(&self) -> usize {
+        let header = unsafe { &*(VIRTIO0 as *const VirtIOHeader) };
+        header.device_type() as usize
+    }
 }
 impl VirtIOBlock {
     pub fn new() -> Self {
@@ -39,7 +43,6 @@ impl VirtIOBlock {
         ))
     }
 }
-
 
 // * 下面要求分配的内存要连续，但是由于只发生再内核初始化阶段 所以可以保证连续
 #[no_mangle]

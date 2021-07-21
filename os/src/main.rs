@@ -20,7 +20,6 @@ mod trap;
 mod drivers;
 
 global_asm!(include_str!("entry.asm"));
-global_asm!(include_str!("link_app.S"));
 
 use core::usize;
 
@@ -32,7 +31,6 @@ pub fn rust_main() -> ! {
     mm::init();
     println!("[kernel] back to world!");
     mm::remap_test();
-;
     trap::init();
     trap::enable_timer_interrupt();
     timer::set_next_trigger();

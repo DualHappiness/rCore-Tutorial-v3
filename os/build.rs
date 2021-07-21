@@ -6,7 +6,7 @@ static TARGET_PATH: &str = "../tests/user/build/elf/";
 fn main() {
     println!("cargo:rerun-if-changed=../user/src/");
     println!("cargo:rerun-if-changed={}", TARGET_PATH);
-    insert_app_data().unwrap();
+    // insert_app_data().unwrap();
 }
 
 fn insert_app_data() -> Result<()> {

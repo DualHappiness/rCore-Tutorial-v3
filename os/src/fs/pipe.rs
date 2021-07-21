@@ -162,6 +162,9 @@ impl File for Pipe {
     fn writable(&self) -> bool {
         self.writable
     }
+    fn fstat(&self, _st: &mut easy_fs::Stat) -> isize {
+        -1
+    }
 }
 
 pub fn make_pipe() -> (Arc<Pipe>, Arc<Pipe>) {

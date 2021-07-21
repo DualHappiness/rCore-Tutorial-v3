@@ -4,9 +4,10 @@ MODE := release
 KERNEL_ELF := target/$(TARGET)/$(MODE)/os
 KERNEL_BIN := $(KERNEL_ELF).bin
 DISASM_TMP := target/$(TARGET)/$(MODE)/asm
-FS_IMG := ../user/target/$(TARGET)/$(MODE)/fs.img
+# FS_IMG := ../tests/user/target/$(TARGET)/$(MODE)/fs.img
+FS_IMG := ../tests/user/build/elf/fs.img
 SDCARD := /dev/sdb
-APPS := ../user/src/bin/*
+APPS := ../tests/user/src/bin/*
 
 # BOARD
 BOARD ?= qemu
@@ -49,8 +50,8 @@ $(KERNEL_BIN): kernel
 	@$(OBJCOPY) $(KERNEL_ELF) --strip-all -O binary $@
 
 $(FS_IMG): $(APPS)
-	@cd ../user && make build
-	@cd ../easy-fs-fuse && cargo run --release -- -s ../user/src/bin/ -t ../user/target/riscv64gc-unknown-none-elf/release/
+	@cd ../tests/user && make all CHAPTER=7
+	@cd ../easy-fs-fuse && cargo run --release -- -s ../tests/user/build/elf/ -t ../tests/user/build/elf/
 
 $(APPS):
 

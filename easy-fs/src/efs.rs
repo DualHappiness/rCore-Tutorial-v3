@@ -137,6 +137,6 @@ impl EasyFileSystem {
     pub fn root_inode(efs: &Arc<Mutex<Self>>) -> Inode {
         let block_device = efs.lock().block_device.clone();
         let (block_id, block_offset) = efs.lock().get_disk_inode_pos(0);
-        Inode::new(block_id, block_offset, efs.clone(), block_device)
+        Inode::new(0, block_id, block_offset, efs.clone(), block_device)
     }
 }

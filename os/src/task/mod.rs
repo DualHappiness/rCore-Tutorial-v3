@@ -47,6 +47,9 @@ pub fn suspend_current_and_run_next() {
 
 pub fn exit_current_and_run_next(exit_code: i32) {
     let task = take_current_task().unwrap();
+    if task.pid.0 == 0 {
+        panic!("Initproc exit: {}", exit_code);
+    }
     let mut inner = task.acquire_inner_lock();
     inner.task_status = TaskStatus::Zombie;
     inner.exit_code = exit_code;

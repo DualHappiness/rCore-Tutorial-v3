@@ -37,6 +37,10 @@ impl BlockDevice for BlockFile {
             "Not a complete block!"
         );
     }
+
+    fn get_dev_id(&self) -> usize {
+        0
+    }
 }
 
 fn main() {
@@ -79,14 +83,16 @@ fn easy_fs_pack() -> std::io::Result<()> {
         });
     // .map(|str| str.into());
     for app in apps {
+        let filename = format!("{}{}.elf", target_path, &app);
         // load app data from host file system
-        let mut host_file = File::open(format!("{}{}", target_path, &app)).unwrap();
-        let mut all_data: Vec<u8> = Vec::new();
-        host_file.read_to_end(&mut all_data).unwrap();
-        // create a file in easy-fs
-        let inode = root_inode.create(&app).unwrap();
-        // write data to easy-fs
-        inode.write_at(0, all_data.as_slice());
+        if let Ok(mut host_file) = File::open(filename) {
+            let mut all_data: Vec<u8> = Vec::new();
+            host_file.read_to_end(&mut all_data).unwrap();
+            // create a file in easy-fs
+            let inode = root_inode.create(&app).unwrap();
+            // write data to easy-fs
+            inode.write_at(0, all_data.as_slice());
+        }
     }
     root_inode.ls().iter().for_each(|app| println!("{}", app));
     Ok(())

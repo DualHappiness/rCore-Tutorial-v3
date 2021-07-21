@@ -2,7 +2,7 @@ use crate::drivers::BLOCK_DEVICE;
 use alloc::{sync::Arc, vec::Vec};
 use bitflags::bitflags;
 use core::fmt::Debug;
-use easy_fs::{EasyFileSystem, Inode};
+use easy_fs::{EasyFileSystem, Inode, Stat};
 use lazy_static::lazy_static;
 use spin::Mutex;
 
@@ -82,6 +82,11 @@ impl File for OSInode {
     fn writable(&self) -> bool {
         self.writable
     }
+
+    fn fstat(&self, st: &mut Stat) -> isize {
+        let inner = self.inner.lock();
+        ROOT_INODE.fstat(&inner.inode, st) as isize
+    }
 }
 
 lazy_static! {
@@ -120,6 +125,10 @@ impl OpenFlags {
 }
 
 pub fn open_file(name: &str, flags: OpenFlags) -> Option<Arc<OSInode>> {
+    if flags.contains(OpenFlags::READ_ONLY | OpenFlags::READ_WRITE) {
+        return None;
+    }
+
     let (readable, writable) = flags.read_write();
     match ROOT_INODE.find(name) {
         None => {
@@ -132,10 +141,21 @@ pub fn open_file(name: &str, flags: OpenFlags) -> Option<Arc<OSInode>> {
             }
         }
         Some(inode) => {
-            if flags.contains(OpenFlags::CREATE | OpenFlags::TRUNC) {
+            if flags.contains(OpenFlags::TRUNC) {
                 inode.clear();
             }
             Some(Arc::new(OSInode::new(readable, writable, inode)))
         }
     }
+}
+
+pub fn linkat(oldpath: &str, newpath: &str, _flag: OpenFlags) -> bool {
+    if oldpath == newpath {
+        return false;
+    }
+    ROOT_INODE.link(oldpath, newpath)
+}
+
+pub fn unlinkat(path: &str) -> bool {
+    ROOT_INODE.unlink(path)
 }

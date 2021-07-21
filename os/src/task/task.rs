@@ -2,6 +2,7 @@ use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 use alloc::vec;
 use alloc::vec::Vec;
+use log::debug;
 use core::ops::{Add, AddAssign};
 use spin::{Mutex, MutexGuard};
 
@@ -187,6 +188,11 @@ impl TaskControlBlock {
 
 impl TaskControlBlock {
     pub fn acquire_inner_lock(&self) -> MutexGuard<TaskControlBlockInner> {
+        debug!(
+            "pid: {} acquire lock {:?}.",
+            self.pid.0,
+            self.inner.is_locked()
+        );
         self.inner.lock()
     }
     pub fn getpid(&self) -> usize {

@@ -69,6 +69,7 @@ impl DiskInode {
     pub fn is_dir(&self) -> bool {
         self.type_ == DiskInodeType::Directory
     }
+    #[allow(unused)]
     pub fn is_file(&self) -> bool {
         self.type_ == DiskInodeType::File
     }
@@ -335,12 +336,13 @@ impl DiskInode {
     }
 }
 
-const NAME_LENGTH_LIMIT: usize = 27;
+const NAME_LENGTH_LIMIT: usize = 26;
 #[repr(C)]
 pub struct DirEntry {
     // ? 使用len保存而不是'\0'结尾应该是更好的选择
-    name: [u8; NAME_LENGTH_LIMIT + 1],
     inode_number: u32,
+    flag: u8,
+    name: [u8; NAME_LENGTH_LIMIT + 1],
 }
 pub const DIRENTRY_SIZE: usize = 32;
 impl DirEntry {
@@ -348,6 +350,7 @@ impl DirEntry {
         Self {
             name: [0u8; NAME_LENGTH_LIMIT + 1],
             inode_number: 0,
+            flag: 0,
         }
     }
     pub fn new(name: &str, inode_number: u32) -> Self {
@@ -355,6 +358,7 @@ impl DirEntry {
         &mut bytes[..name.len()].copy_from_slice(name.as_bytes());
         Self {
             name: bytes,
+            flag: 0,
             inode_number,
         }
     }
@@ -376,6 +380,12 @@ impl DirEntry {
             .find(|i| self.name[*i] == b'\0')
             .expect(err_msg);
         core::str::from_utf8(&self.name[..len]).expect(err_msg)
+    }
+    pub fn is_valid(&self) -> bool {
+        self.flag == 0
+    }
+    pub fn change_flag(&mut self, flag: u8) {
+        self.flag = flag
     }
     pub fn inode_number(&self) -> u32 {
         self.inode_number
