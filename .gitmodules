@@ -1,3 +1,6 @@
 [submodule "tests"]
 	path = tests
 	url = https://github.com/DeathWish5/rCore_tutorial_tests.git
+[submodule "virtio-drivers"]
+	path = virtio-drivers
+	url = https://github.com/rcore-os/virtio-drivers.git
